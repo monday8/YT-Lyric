@@ -1,0 +1,8 @@
+app/
+__pycache__/
+flask/build
+flask/dist
+flask/app.spec
+other/
+test/
+python打包code.md

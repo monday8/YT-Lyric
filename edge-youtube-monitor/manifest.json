@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Monitor",
+  "version": "1.0",
+  "description": "Send YouTube video time to a Python server",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://www.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+    }
+  }
+}
