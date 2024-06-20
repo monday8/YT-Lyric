@@ -30,17 +30,21 @@ class TrayApp(QMainWindow):
         screen_height = QApplication.primaryScreen().size().height()
         window_width = screen_width // 4
         window_height = screen_height // 6
-
+        self.setWindowIcon(QIcon('youtube.png'))
         self.setGeometry(0, screen_height - window_height, window_width, window_height)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.setWindowOpacity(0.5)  # 設置透明度，0.0完全透明，1.0完全不透明
+        # self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.setWindowOpacity(0.6)  # 設置透明度，0.0 完全透明，1.0 完全不透明
+
+        # 不設置固定大小，允許窗口大小調整
+        # self.setFixedSize(window_width, window_height)  # 如果你需要固定大小，可以設置這行為固定大小
 
         # 設置中心小部件
         central_widget = QWidget()
         layout = QVBoxLayout()
 
         # 自定義 QLabel
-        self.lyric_text = QLabel('選擇的語言: 無', self)
+        self.lyric_text = QLabel('請開啟Youtube', self)
         self.lyric_text.setAlignment(Qt.AlignCenter)
         self.lyric_text.setFont(QFont('Helvetica', 20))
         self.lyric_text.setStyleSheet('background-color: black; color: white;')
@@ -61,6 +65,16 @@ class TrayApp(QMainWindow):
 
         # 最小化到托盤
         self.tray_icon.activated.connect(self.icon_activated)
+        
+        # Add Exit App action
+        exit_action = QAction("離開App(請勿點擊)", self)
+        exit_action.triggered.connect(self.close)  # or you can use sys.exit() if self.close() is not defined
+        self.tray_menu.addAction(exit_action)
+
+        # version
+        help = QAction("版本 V1.0.1", self)
+        help.setEnabled(False)
+        self.tray_menu.addAction(help)
 
         # 啟用窗口拖動
         self._startPos = None
@@ -99,9 +113,14 @@ class TrayApp(QMainWindow):
             print("沒有可用的語言")
     
         # Add Exit App action
-        exit_action = QAction("離開App", self)
+        exit_action = QAction("離開App(請勿點擊)", self)
         exit_action.triggered.connect(self.close)  # or you can use sys.exit() if self.close() is not defined
         self.tray_menu.addAction(exit_action)
+
+        # version
+        help = QAction("版本 V1.0.1", self)
+        help.setEnabled(False)
+        self.tray_menu.addAction(help)
 
 
 class GuiWorker(QObject):
