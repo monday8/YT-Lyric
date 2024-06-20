@@ -11,7 +11,8 @@ ytdlp_options = {
 
 def lyric_lang(current_url):
     # 排除縮小導致沒有網址可以讀
-    if current_url == 'Unknown%20ID':return None
+    if current_url == 'Unknown ID':
+        return None
     # URL
     video_url = 'https://www.youtube.com/watch?v='+current_url
     
