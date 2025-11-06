@@ -5,6 +5,9 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
 from globals import data_queue
 from dlp import lyric_lang, getlyric
 import queue
+import os
+def resource_path(relative_path):
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), relative_path)
 
 class TrayApp(QMainWindow):
     update_label_signal = pyqtSignal(str)
@@ -21,8 +24,10 @@ class TrayApp(QMainWindow):
         self.gui_worker.update_label_signal.connect(self.update_label)
         self.gui_worker.update_menu_signal.connect(self.update_menu)
         self.gui_thread.started.connect(self.gui_worker.update_gui)
+        # 字體訊號
+        self.gui_worker.update_font_signal.connect(self.set_lyric_font)
         self.gui_thread.start()
-
+        
     def initUI(self):
         self.setWindowTitle('YouTube 字幕程式')
 
@@ -30,11 +35,11 @@ class TrayApp(QMainWindow):
         screen_height = QApplication.primaryScreen().size().height()
         window_width = screen_width // 4
         window_height = screen_height // 6
-        self.setWindowIcon(QIcon('youtube.png'))
+
         self.setGeometry(0, screen_height - window_height, window_width, window_height)
-        # self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
-        self.setWindowOpacity(0.6)  # 設置透明度，0.0 完全透明，1.0 完全不透明
+        # self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowOpacity(0.4)  # 設置透明度，0.0 完全透明，1.0 完全不透明
 
         # 不設置固定大小，允許窗口大小調整
         # self.setFixedSize(window_width, window_height)  # 如果你需要固定大小，可以設置這行為固定大小
@@ -44,9 +49,9 @@ class TrayApp(QMainWindow):
         layout = QVBoxLayout()
 
         # 自定義 QLabel
-        self.lyric_text = QLabel('請開啟Youtube', self)
+        self.lyric_text = QLabel('請開啟Youtube!!', self)
         self.lyric_text.setAlignment(Qt.AlignCenter)
-        self.lyric_text.setFont(QFont('Helvetica', 20))
+        self.lyric_text.setFont(QFont('微軟正黑體', 20))
         self.lyric_text.setStyleSheet('background-color: black; color: white;')
 
         layout.addWidget(self.lyric_text)
@@ -56,7 +61,12 @@ class TrayApp(QMainWindow):
 
         # 創建系統托盤圖標
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(QIcon('youtube.png'))  # 將 'icon.png' 替換為你的圖標路徑
+        self.tray_icon.setIcon(QIcon('youtube.ico'))  # 將 'icon.png' 替換為你的圖標路徑
+
+        # 圖標
+        # icon_path = resource_path('youtube.ico')
+        # self.setWindowIcon(QIcon(icon_path))
+        # self.tray_icon.setIcon(QIcon(icon_path))
 
         # 創建上下文菜單
         self.tray_menu = QMenu(self)
@@ -72,13 +82,13 @@ class TrayApp(QMainWindow):
         self.tray_menu.addAction(exit_action)
 
         # version
-        help = QAction("版本 V1.0.1", self)
+        help = QAction("版本 v1.0.2", self)
         help.setEnabled(False)
         self.tray_menu.addAction(help)
 
         # 啟用窗口拖動
         self._startPos = None
-
+      
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._startPos = event.pos()
@@ -99,6 +109,9 @@ class TrayApp(QMainWindow):
 
     def update_label(self, text):
         self.lyric_text.setText(text)
+  
+    def set_lyric_font(self, font: QFont):
+        self.lyric_text.setFont(font)
 
     def update_menu(self, lyric_lang_list):
         self.tray_menu.clear()
@@ -111,14 +124,33 @@ class TrayApp(QMainWindow):
             self.tray_menu.addMenu(sub_menu)
         else:
             print("沒有可用的語言")
-    
+
+        # 字體與大小選單
+        font_menu = self.tray_menu.addMenu("字體設定")
+        # 字體選擇
+        fonts = ["Helvetica", "Arial", "微軟正黑體", "Courier New"]
+        font_sub_menu = font_menu.addMenu("選擇字體")
+        for f in fonts:
+            action = QAction(f, self)
+            action.triggered.connect(lambda _, font=f: self.gui_worker.set_font(font))
+            font_sub_menu.addAction(action)
+
+        # 放大 / 縮小
+        size_menu = font_menu.addMenu("字體大小")
+        increase_action = QAction("放大", self)
+        increase_action.triggered.connect(lambda: self.gui_worker.change_font_size(2))
+        decrease_action = QAction("縮小", self)
+        decrease_action.triggered.connect(lambda: self.gui_worker.change_font_size(-2))
+        size_menu.addAction(increase_action)
+        size_menu.addAction(decrease_action)
+
         # Add Exit App action
         exit_action = QAction("離開App(請勿點擊)", self)
         exit_action.triggered.connect(self.close)  # or you can use sys.exit() if self.close() is not defined
         self.tray_menu.addAction(exit_action)
 
         # version
-        help = QAction("版本 V1.0.1", self)
+        help = QAction("版本 v1.0.2", self)
         help.setEnabled(False)
         self.tray_menu.addAction(help)
 
@@ -126,13 +158,29 @@ class TrayApp(QMainWindow):
 class GuiWorker(QObject):
     update_label_signal = pyqtSignal(str)
     update_menu_signal = pyqtSignal(dict)
+    # 更新字體訊號
+    update_font_signal = pyqtSignal(QFont)
 
     def __init__(self, parent=None):
         super().__init__()
         self.select_lang = "ko"  # 初始設置為韓文字幕
+        self.font_family = "微軟正黑體"
+        self.font_size = 20
+
+    def set_font(self, font_name):
+        self.font_family = font_name
+        self.update_font()
 
     def set_language(self, lang):
         self.select_lang = lang
+
+    def change_font_size(self, delta):
+        self.font_size = max(8, self.font_size + delta)  # 最小字體8
+        self.update_font()
+
+    def update_font(self):
+        font = QFont(self.font_family, self.font_size)
+        self.update_font_signal.emit(font)
 
     def print_subtitle(self, events, time_in_seconds):
         # 遍歷每個事件塊，檢查秒數是否落在事件的時間範圍內
